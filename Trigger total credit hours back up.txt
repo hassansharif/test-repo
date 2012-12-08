@@ -1,0 +1,65 @@
+trigger CheckTotalCreditHours on Courses__c (after update) {
+
+	set<id> CourseId=new set<id>();
+	set<id> StudentId=new set<id>();
+	decimal CreditHours;
+	decimal StudentTotalCreditHours;
+	decimal NewCreditHours;
+	decimal OldCreditHours;
+	Id Err=null;
+	
+	Map<Id,decimal> M_TotalCrditHours = new Map<Id,decimal>();
+	
+	for(Courses__c UpdatedData : Trigger.new){
+    // a.addError('<a href=\'http://google.com\'>Google</a>');
+    	CourseId.add(UpdatedData.Id);
+    	//CourseId.add(UpdatedData.Credit_Hours__c);
+    	CreditHours=UpdatedData.Credit_Hours__c;
+    	
+	}
+		for(Courses__c OldData : Trigger.old){
+    // a.addError('<a href=\'http://google.com\'>Google</a>');
+    	
+    	//CourseId.add(UpdatedData.Credit_Hours__c);
+    	OldCreditHours=OldData.Credit_Hours__c;
+    	
+	}
+	
+	
+	List<Student_Cource__c> StudentsIds =[SELECT  Student__c 
+									   FROM Student_Cource__c 
+									   where Course__c IN :CourseId];
+	
+	
+	//Map<Id,integer> M_TotalCrditHours = new Map<Id,integer>();
+	
+	for(Integer i=0;i<StudentsIds.size();i++){
+		StudentId.add(StudentsIds[i].Student__c);
+	}
+	List<Students__c> TotalCreditHours=[SELECT Id, Total_Credit_Hours__c 
+										FROM Students__c
+										where Id IN:StudentId];
+	for(integer i=0;i<TotalCreditHours.size();i++){
+	  		M_TotalCrditHours.put(TotalCreditHours[i].Id,TotalCreditHours[i].Total_Credit_Hours__c);
+	}
+	
+	for(Integer i=0;i<StudentsIds.size();i++){
+		StudentTotalCreditHours = M_TotalCrditHours.get(StudentsIds[i].Student__c); 
+		
+		NewCreditHours=StudentTotalCreditHours+CreditHours;
+		if(NewCreditHours>16){
+			Err=StudentsIds[i].Student__c;
+		}
+	}
+	
+	if(Err != null){
+		for(Courses__c UpdatedData : Trigger.new){
+			UpdatedData.addError('kik'+NewCreditHours);
+		}
+	}
+	else{
+		for(Courses__c UpdatedData : Trigger.new){
+			UpdatedData.addError(' Old '+OldCreditHours+' New '+NewCreditHours + 'StudentTotalCreditHours= '+StudentTotalCreditHours);
+		}
+	}
+}
